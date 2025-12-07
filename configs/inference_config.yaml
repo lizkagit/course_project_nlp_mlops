@@ -1,0 +1,14 @@
+# inference_config.yaml
+server:
+  host: "0.0.0.0"
+  port: 8000
+  reload: true
+
+model:
+  model_path: "models/best_model.pkl"
+  vectorizer_path: "models/tfidf_vectorizer.pkl"
+
+api:
+  title: "MLOPS Comment Predictor API"
+  version: "1.0.0"
+  docs_url: "/docs"

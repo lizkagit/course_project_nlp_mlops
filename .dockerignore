@@ -1,0 +1,18 @@
+# .dockerignore
+
+# Игнорировать всё кроме нужного
+*
+
+# Разрешить только необходимое
+!service/
+!configs/
+!config_loader.py
+!requirements.txt
+
+
+# Но разрешить основные файлы
+!service/api.py
+!service/predictor.py
+!service/Dockerfile
+!service/requirements.txt
+!service/models/

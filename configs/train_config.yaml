@@ -1,0 +1,65 @@
+# train_config.yaml
+experiments:
+  experiment1:
+    name: "Ridge_Baseline"
+    type: "ridge"
+    tfidf_params:
+      max_features: 5000
+      ngram_range: [1, 2]
+      min_df: 2
+      max_df: 0.85
+    ridge_params:
+      alpha: 1.0
+      random_state: 42
+  
+  experiment2:
+    name: "Ridge_Extended"
+    type: "ridge"
+    tfidf_params:
+      max_features: 8000
+      ngram_range: [1, 3]
+      min_df: 3
+      max_df: 0.8
+      sublinear_tf: true
+    ridge_params:
+      alpha: 0.5
+      random_state: 42
+
+  experiment3:
+    name: "Neural_Network_SVD"
+    type: "neural_network"
+    tfidf_params:
+      max_features: 8000
+      ngram_range: [1, 3]
+      min_df: 9
+      max_df: 0.8
+      sublinear_tf: true
+    nn_params:
+      learning_rate: 0.001
+      epochs: 100
+      batch_size: 32
+    svd:
+      enabled: true
+      components: 600
+
+  experiment4:
+    name: "Neural_Network_No_SVD"
+    type: "neural_network"
+    tfidf_params:
+      max_features: 4000
+      ngram_range: [1, 3]
+      min_df: 9
+      max_df: 0.9
+      sublinear_tf: true
+    nn_params:
+      learning_rate: 0.0005
+      epochs: 100
+      batch_size: 32
+    svd:
+      enabled: false
+
+training:
+  test_size: 0.1
+  random_state: 42
+  save_best_model: true
+  output_dir: "service_models/"
