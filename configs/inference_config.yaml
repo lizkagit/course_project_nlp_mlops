@@ -1,14 +1,21 @@
-# inference_config.yaml
+# configs/inference_config.yaml
+api:
+  title: "NLP MLOps API"
+  description: "API для предсказания количества комментариев"
+  version: "1.0.0"
+  redoc_url: "/redoc"
+  docs_url: "/docs"
+
 server:
   host: "0.0.0.0"
   port: 8000
-  reload: true
+  reload: false
 
 model:
-  model_path: "models/best_model.pkl"
-  vectorizer_path: "models/tfidf_vectorizer.pkl"
+  model_path: "/app/models/best_model.pkl"  # Изменили на best_model.pkl
+  vectorizer_path: "/app/models/tfidf_vectorizer.pkl"
+  type: "ridge"
 
-api:
-  title: "MLOPS Comment Predictor API"
-  version: "1.0.0"
-  docs_url: "/docs"
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

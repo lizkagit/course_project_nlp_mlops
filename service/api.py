@@ -3,33 +3,68 @@ from pydantic import BaseModel
 from typing import Optional, List
 import uvicorn
 import os
-from predictor import ModelPredictor
 import sys
+
+# Добавляем путь к конфигам
 current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(current_dir)
-sys.path.insert(0, project_root)
+configs_dir = os.path.join(current_dir, "..", "configs")
+sys.path.insert(0, configs_dir)
 
-# Импортируем конфигурацию
-from config_loader import config
+# Пытаемся загрузить конфигурацию
+try:
+    from config_loader import config
+    HAS_CONFIG = True
+except ImportError:
+    HAS_CONFIG = False
+    print("⚠️ config_loader не найден, используем значения по умолчанию")
+
+# Инициализируем предиктор
 from predictor import ModelPredictor
-
-# Получаем конфиг
-inference_config = config.get_inference_config()
 
 # Создаем FastAPI приложение
 app = FastAPI(
-    title=inference_config.api.title,
+    title="NLP MLOps API",
     description="API для предсказания количества комментариев по тексту поста",
-    version=inference_config.api.version,
-    docs_url=inference_config.api.docs_url,
-    redoc_url=inference_config.api.redoc_url
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc"
 )
 
-# Инициализируем предиктор с конфигом
+# Пути к моделям по умолчанию
+DEFAULT_MODEL_PATH = os.path.join(current_dir, "models", "best_model.pkl")
+DEFAULT_VECTORIZER_PATH = os.path.join(current_dir, "models", "tfidf_vectorizer.pkl")
+
+# Получаем пути из конфига или используем значения по умолчанию
+if HAS_CONFIG:
+    try:
+        inference_config = config.get_inference_config()
+        model_path = inference_config.model.model_path
+        vectorizer_path = inference_config.model.vectorizer_path
+        print(f"📁 Используем пути из конфига:")
+        print(f"   Модель: {model_path}")
+        print(f"   Векторайзер: {vectorizer_path}")
+    except Exception as e:
+        print(f"⚠️ Ошибка загрузки конфига: {e}")
+        model_path = DEFAULT_MODEL_PATH
+        vectorizer_path = DEFAULT_VECTORIZER_PATH
+else:
+    model_path = DEFAULT_MODEL_PATH
+    vectorizer_path = DEFAULT_VECTORIZER_PATH
+    print(f"📁 Используем пути по умолчанию:")
+    print(f"   Модель: {model_path}")
+    print(f"   Векторайзер: {vectorizer_path}")
+
+# Проверяем существование файлов
+print(f"🔍 Проверяем наличие файлов моделей:")
+print(f"   Модель существует: {os.path.exists(model_path)}")
+print(f"   Векторайзер существует: {os.path.exists(vectorizer_path)}")
+
+# Инициализируем предиктор
 predictor = ModelPredictor(
-    model_path=inference_config.model.model_path,
-    vectorizer_path=inference_config.model.vectorizer_path
+    model_path=model_path,
+    vectorizer_path=vectorizer_path
 )
+
 # Модели данных (Pydantic схемы)
 class PredictRequest(BaseModel):
     """Запрос для предсказания"""
@@ -53,7 +88,7 @@ class HealthResponse(BaseModel):
     model_loaded: bool
     model_type: Optional[str] = None
 
-# Эндпоинты
+# Эндпоинты (оставляем без изменений)
 @app.get("/", tags=["Root"])
 async def root():
     """Корневой эндпоинт"""
@@ -109,7 +144,7 @@ async def model_info():
 if __name__ == "__main__":
     uvicorn.run(
         "api:app",
-        host=inference_config.server.host,
-        port=inference_config.server.port,
-        reload=inference_config.server.reload
+        host="0.0.0.0",
+        port=8000,
+        reload=False
     )

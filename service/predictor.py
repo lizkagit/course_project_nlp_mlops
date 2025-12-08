@@ -3,58 +3,36 @@ import numpy as np
 from typing import Dict, Any
 import time
 import os
-import sys
-
-# Добавляем корень проекта в путь
-current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(current_dir)
-sys.path.insert(0, project_root)
-
-try:
-    from config_loader import config
-    HAS_CONFIG = True
-except ImportError:
-    HAS_CONFIG = False
-    print("⚠️ Не удалось загрузить конфигурацию")
 
 class ModelPredictor:
-    def __init__(self, model_path: str = None, vectorizer_path: str = None):
+    def __init__(self, model_path: str, vectorizer_path: str):
+        self.model_path = model_path
+        self.vectorizer_path = vectorizer_path
         self.model = None
         self.vectorizer = None
         self.is_loaded = False
         
-        # Используем пути из конфига если не указаны
-        if model_path is None and HAS_CONFIG:
-            model_path = config.get_inference_config().model.model_path
-        elif model_path is None:
-            model_path = "service_models/best_model.pkl"
-            
-        if vectorizer_path is None and HAS_CONFIG:
-            vectorizer_path = config.get_inference_config().model.vectorizer_path
-        elif vectorizer_path is None:
-            vectorizer_path = "service_models/tfidf_vectorizer.pkl"
+        print(f"🔄 Инициализация предиктора:")
+        print(f"   Путь к модели: {model_path}")
+        print(f"   Путь к векторайзеру: {vectorizer_path}")
         
-        # Проверяем абсолютные пути
-        if not os.path.isabs(model_path):
-            model_path = os.path.join(current_dir, model_path)
-        if not os.path.isabs(vectorizer_path):
-            vectorizer_path = os.path.join(current_dir, vectorizer_path)
-        
-        print(f"🔄 Загружаю модель из: {model_path}")
-        print(f"🔄 Загружаю векторайзер из: {vectorizer_path}")
-        
-        self.load(model_path, vectorizer_path)
+        self.load()
     
-    
-    def load(self, model_path: str, vectorizer_path: str) -> bool:
+    def load(self) -> bool:
         """Загружает модель и векторайзер"""
         try:
-            self.model = joblib.load(model_path)
-            self.vectorizer = joblib.load(vectorizer_path)
+            print(f"🔍 Загружаю модель...")
+            self.model = joblib.load(self.model_path)
+            print(f"✅ Модель загружена")
+            
+            print(f"🔍 Загружаю векторайзер...")
+            self.vectorizer = joblib.load(self.vectorizer_path)
+            print(f"✅ Векторайзер загружен")
+            
             self.is_loaded = True
-            print(f"✅ Модель загружена успешно")
+            print(f"🎯 Модель готова к работе!")
             print(f"   Тип модели: {type(self.model).__name__}")
-            print(f"   Размер словаря: {len(self.vectorizer.vocabulary_)} слов")
+            print(f"   Размер словаря: {len(self.vectorizer.vocabulary_) if hasattr(self.vectorizer, 'vocabulary_') else 'N/A'}")
             return True
         except Exception as e:
             print(f"❌ Ошибка загрузки модели: {e}")
@@ -105,9 +83,17 @@ class ModelPredictor:
         if not self.is_loaded:
             return {"is_loaded": False}
         
-        return {
+        info = {
             "is_loaded": True,
             "model_type": type(self.model).__name__,
-            "vocabulary_size": len(self.vectorizer.vocabulary_),
-            "model_params": str(self.model.get_params()) if hasattr(self.model, 'get_params') else "Unknown"
+            "model_path": self.model_path,
+            "vectorizer_path": self.vectorizer_path
         }
+        
+        if hasattr(self.vectorizer, 'vocabulary_'):
+            info["vocabulary_size"] = len(self.vectorizer.vocabulary_)
+        
+        if hasattr(self.model, 'get_params'):
+            info["model_params"] = str(self.model.get_params())
+        
+        return info

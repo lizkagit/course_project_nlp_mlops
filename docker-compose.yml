@@ -1,20 +1,15 @@
-# docker-compose.yml (в КОРНЕ проекта)
- 
-
 services:
   mlops-api:
     build:
-      context: .               # Собираем из КОРНЯ проекта
-      dockerfile: service/Dockerfile  # Указываем путь к Dockerfile
-      container_name: mlops-api
+      context: .  # Контекст - корневая папка
+      dockerfile: service/Dockerfile  # Но Dockerfile в папке service
+    container_name: mlops-api
     ports:
       - "8000:8000"
     environment:
       - ENVIRONMENT=production
       - LOG_LEVEL=INFO
     volumes:
-      # Монтируем только конфиги и модели
+      # Монтируем конфиги
       - ./configs:/app/configs
-      - ./service/service_models:/app/service/models
-    working_dir: /app/service  # Рабочая директория в контейнере
     restart: unless-stopped

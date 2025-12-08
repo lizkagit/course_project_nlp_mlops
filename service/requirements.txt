@@ -1,9 +1,9 @@
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
+fastapi==0.124.0
+uvicorn[standard]==0.38.0
 pydantic==2.5.0
-scikit-learn==1.3.2
-numpy==1.24.4
-joblib==1.3.2
-pyyaml>=6.0
-omegaconf>=2.3.0
-python-dotenv>=1.0.0
+scikit-learn==1.7.2
+numpy==2.3.4
+joblib==1.4.2  # Более новая версия joblib
+PyYAML==6.0.3
+omegaconf==2.3.0
+python-dotenv==1.2.1
