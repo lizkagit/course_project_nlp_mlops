@@ -39,7 +39,7 @@
 - **Стратификация**: случайное разбиение (random_state=42)
 ## Архитектура модели
 ### Выбранная модель: Ridge Regression
-```python
+``` 
 Модель: Ridge(alpha=1.0, random_state=42)
 Препроцессинг: TfidfVectorizer(
     max_features=5000,
@@ -47,7 +47,7 @@
     min_df=2,
     max_df=0.85
 )
-
+```
 ## Метрики
 ### Результаты лучшей модели (Ridge_Baseline)
 | Метрика | Значение | Описание |
@@ -62,4 +62,5 @@
 - Векторайзер сохранен отдельно
 - Пути:
   - Модель: `service/models/best_model.pkl`
+
   - Векторайзер: `service/models/tfidf_vectorizer.pkl`
