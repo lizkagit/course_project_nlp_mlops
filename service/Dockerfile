@@ -15,8 +15,10 @@ COPY configs ./configs/
 
 # Копируем BentoML файл
 COPY service/bentoml_service.py .
+# Копируем ui файл
+COPY service/gradio_ui.py .
 
-EXPOSE 8000 3000
+EXPOSE 8000 3000 7860   
 
-# Запускаем оба сервиса (правильная команда для BentoML 1.4+)
-CMD ["sh", "-c", "python api.py & bentoml serve bentoml_service.py:CommentPredictor --port 3000 --host 0.0.0.0"]
+# Запускаем ВСЕ три сервиса
+CMD ["sh", "-c", "python api.py & bentoml serve bentoml_service.py:CommentPredictor --port 3000 --host 0.0.0.0 & python gradio_ui.py"]

@@ -13,18 +13,31 @@ docker rmi mlops-api 2>/dev/null || true
 echo "Building Docker image..."
 docker build --no-cache -t mlops-api -f service/Dockerfile .
 
-# Запускаем контейнер
-echo "Starting container..."
-docker run -d -p 8000:8000 -p 3000:3000 --name mlops-full mlops-api
+# 3. Запуск
+echo "▶️  Запуск контейнера с тремя сервисами..."
+docker run -d \
+  -p 8000:8000 \
+  -p 3000:3000 \
+  -p 7860:7860 \
+  --name mlops-full \
+  mlops-api:latest
 
-# Ждем, пока сервисы запустятся
-echo "Waiting for services to start..."
-sleep 10
+echo ""
+echo "✅ Контейнер запущен!"
+echo ""
 
-# Проверяем статус контейнера
-echo "Container status:"
-docker ps | grep mlops-full
+# 4. Ожидание запуска
+echo "⏳ Ожидание запуска сервисов (15 секунд)..."
+sleep 15
 
-# Показываем логи
-echo "Container logs:"
-docker logs mlops-full
+# 5. Проверка статуса
+echo "📊 Статус контейнера:"
+docker ps --filter "name=mlops-full" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+
+echo ""
+echo "🌐 Доступные сервисы:"
+echo "   • FastAPI:      http://localhost:8000"
+echo "   • FastAPI Docs: http://localhost:8000/docs"
+echo "   • BentoML:      http://localhost:3000"
+echo "   • Gradio UI:    http://localhost:7860"
+echo ""

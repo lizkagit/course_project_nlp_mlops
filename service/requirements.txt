@@ -9,3 +9,4 @@ omegaconf==2.3.0
 python-dotenv==1.2.1
 bentoml==1.4.30  
 gradio==6.0.2 
+requests==2.32.5

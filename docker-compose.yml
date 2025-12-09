@@ -1,7 +1,7 @@
  
 
 services:
-  #  FastAPI сервис
+  # FastAPI сервис
   fastapi-service:
     build: ./service
     container_name: fastapi-comment-predictor
@@ -10,6 +10,8 @@ services:
     command: python api.py  # Запуск FastAPI
     volumes:
       - ./configs:/app/configs
+    networks:
+      - ml-network
 
   # BentoML сервис  
   bentoml-service:
@@ -17,6 +19,27 @@ services:
     container_name: bentoml-comment-predictor
     ports:
       - "3000:3000"
-    command: bentoml serve service/bento_service.py:svc --port 3000 --host 0.0.0.0
+    command: bentoml serve bentoml_service.py:CommentPredictor --port 3000 --host 0.0.0.0
     volumes:
       - ./configs:/app/configs
+    networks:
+      - ml-network
+
+  # Gradio UI
+  gradio-ui:
+    build: ./service
+    container_name: gradio-comment-predictor-ui
+    ports:
+      - "7860:7860"
+    command: python gradio_ui.py  # Запуск Gradio UI
+    volumes:
+      - ./configs:/app/configs
+    depends_on:
+      - bentoml-service
+      - fastapi-service
+    networks:
+      - ml-network
+
+networks:
+  ml-network:
+    driver: bridge
