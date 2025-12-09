@@ -1,9 +1,11 @@
 fastapi==0.124.0
 uvicorn[standard]==0.38.0
-pydantic==2.5.0
+pydantic==2.12.4
 scikit-learn==1.7.2
 numpy==2.3.4
 joblib==1.4.2  # Более новая версия joblib
 PyYAML==6.0.3
 omegaconf==2.3.0
 python-dotenv==1.2.1
+bentoml==1.4.30  
+gradio==6.0.2 

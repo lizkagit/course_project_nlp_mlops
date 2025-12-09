@@ -2,29 +2,21 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Сначала копируем только requirements.txt для кэширования
+# Копируем requirements
 COPY service/requirements.txt .
-
-# Устанавливаем зависимости
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Копируем весь код
+# Копируем код
 COPY service/api.py .
 COPY service/predictor.py .
 COPY service/models ./models/
 COPY config_loader.py .
-
-# Копируем конфиги
 COPY configs ./configs/
 
-# Проверяем что скопировалось
-RUN echo "📁 Структура проекта:" && \
-    ls -la && \
-    echo "📁 Содержимое configs:" && \
-    ls -la configs/ && \
-    echo "📁 Содержимое models:" && \
-    ls -la models/
+# Копируем BentoML файл
+COPY service/bentoml_service.py .
 
-EXPOSE 8000
+EXPOSE 8000 3000
 
-CMD ["python", "api.py"]
+# Запускаем оба сервиса (правильная команда для BentoML 1.4+)
+CMD ["sh", "-c", "python api.py & bentoml serve bentoml_service.py:CommentPredictor --port 3000 --host 0.0.0.0"]

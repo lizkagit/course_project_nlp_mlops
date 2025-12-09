@@ -1,15 +1,22 @@
+ 
+
 services:
-  mlops-api:
-    build:
-      context: .  # Контекст - корневая папка
-      dockerfile: service/Dockerfile  # Но Dockerfile в папке service
-    container_name: mlops-api
+  #  FastAPI сервис
+  fastapi-service:
+    build: ./service
+    container_name: fastapi-comment-predictor
     ports:
       - "8000:8000"
-    environment:
-      - ENVIRONMENT=production
-      - LOG_LEVEL=INFO
+    command: python api.py  # Запуск FastAPI
     volumes:
-      # Монтируем конфиги
       - ./configs:/app/configs
-    restart: unless-stopped
+
+  # BentoML сервис  
+  bentoml-service:
+    build: ./service
+    container_name: bentoml-comment-predictor
+    ports:
+      - "3000:3000"
+    command: bentoml serve service/bento_service.py:svc --port 3000 --host 0.0.0.0
+    volumes:
+      - ./configs:/app/configs
