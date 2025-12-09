@@ -101,8 +101,9 @@ python test_metro_apis.py
 
 ### Модели
 
-- Основная модель: находится в `models/service_models/`
-- Обучение: см. `models/course_mlops.ipynb`
-- Эксперименты: результаты в `models/experiment_results_comparison.csv`
+- Основная модель: находится в `notebooks/service_models/`
+- Обучение: см. `notebooks/course_mlops.ipynb`
+- Эксперименты: результаты в `notebooks/experiment_results_comparison.csv`
+
 
 Проект разработан в учебных целях в рамках курса MLOps.
