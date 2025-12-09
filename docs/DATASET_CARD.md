@@ -108,12 +108,11 @@
                 ../data/processed/df_capped_.csv
 Для экспериментов: ../data/processed/experiments/exp1_regres.csv
 ```
-
-```markdown
+ 
 ## Data Pipeline
 
 ```
-VK API/Scraping
+VK API/Parsing
      ↓
 Raw VK Posts (72,152 posts)
      ↓
@@ -130,4 +129,5 @@ Text Cleaning & Lemmatization
 Split (90/10)
      ↓
 TF-IDF Vectorization (5,000 features)
+
 ```
