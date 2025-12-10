@@ -2,57 +2,57 @@ import bentoml
 import joblib
 import os
 import numpy as np
-from typing import List
+from typing import List, Dict, Any
 
 # Пути к моделям
 current_dir = os.path.dirname(os.path.abspath(__file__))
 model_path = os.path.join(current_dir, "models", "best_model.pkl")
 vectorizer_path = os.path.join(current_dir, "models", "tfidf_vectorizer.pkl")
 
-# Загружаем модель и векторайзер
-model = joblib.load(model_path)
-vectorizer = joblib.load(vectorizer_path)
-
 @bentoml.service(
     name="comment_predictor_batch",
     version="1.0.0"
 )
 class CommentPredictor:
-    
+    def __init__(self):
+        # Загружаем модели в конструкторе
+        self.model = joblib.load(model_path)
+        self.vectorizer = joblib.load(vectorizer_path)
+
     @bentoml.api
     def predict(self, text: str) -> dict:
         """Предсказание для одного текста"""
         try:
-            features = vectorizer.transform([text])
-            prediction = model.predict(features)
+            features = self.vectorizer.transform([text])
+            prediction = self.model.predict(features)
             return {
-                "prediction": float(prediction[0]), 
+                "prediction": float(prediction[0]),
                 "status": "success",
                 "type": "single"
             }
         except Exception as e:
             return {
-                "prediction": 0.0, 
-                "error": str(e), 
+                "prediction": 0.0,
+                "error": str(e),
                 "status": "error",
                 "type": "single"
             }
-    
+
     @bentoml.api
-    def predict_batch(self, texts: List[str]) -> dict:
+    def predict_batch(self, texts: List[str]) -> Dict[str, Any]:
         """Batch предсказание для списка текстов"""
         try:
-            # Преобразуем все тексты
-            features = vectorizer.transform(texts)
-            
+            # Преобразуем все тексты в фичи
+            features = self.vectorizer.transform(texts)
+
             # Получаем предсказания для всего батча
-            predictions = model.predict(features)
-            
+            predictions = self.model.predict(features)
+
             return {
                 "status": "success",
                 "type": "batch",
                 "total_texts": len(texts),
-                "predictions": predictions.tolist(),
+                "predictions": [float(pred) for pred in predictions],
                 "predictions_summary": {
                     "min": float(np.min(predictions)),
                     "max": float(np.max(predictions)),
@@ -71,7 +71,15 @@ class CommentPredictor:
     @bentoml.api
     def health(self) -> dict:
         return {
-            "status": "healthy", 
+            "status": "healthy",
             "model_loaded": True,
             "supports_batch": True
         }
+
+# Собираем сервис
+if __name__ == "__main__":
+    # Создаем экземпляр сервиса
+    svc = CommentPredictor()
+
+    # Сохраняем сервис
+    bentoml.save(svc, name="comment_predictor_batch", version="1.0.0")
