@@ -34,20 +34,58 @@ class ConfigLoader:
         
         if os.path.exists(filepath):
             print(f"✅ Найден файл: {filepath}")
+            
+            # Сначала загружаем через yaml
             with open(filepath, 'r', encoding='utf-8') as f:
-                config_dict = yaml.safe_load(f)
-            return OmegaConf.create(config_dict)
+                yaml_content = yaml.safe_load(f)
+            
+            # Затем преобразуем в OmegaConf
+            return OmegaConf.create(yaml_content)
         else:
             raise FileNotFoundError(f"Конфигурационный файл не найден: {filepath}")
     
     def get_experiment_config(self, exp_num):
-        """Получает конфиг эксперимента"""
+        """Получает конфиг эксперимента как словарь Python"""
         key = f"experiment{exp_num}"
+        
+        # Проверяем существование эксперимента
+        if key not in self.train_config.experiments:
+            raise KeyError(f"Эксперимент {exp_num} не найден в конфиге")
+        
+        # Преобразуем в словарь
+        exp_config = OmegaConf.to_container(self.train_config.experiments[key], resolve=True)
+        
+        # Дополнительная проверка на обязательные поля
+        required_fields = ['name', 'type', 'dataset']
+        for field in required_fields:
+            if field not in exp_config:
+                raise KeyError(f"Отсутствует обязательное поле '{field}' в эксперименте {exp_num}")
+        
+        return exp_config
+    
+    def get_experiment_config_omegaconf(self, exp_num):
+        """Получает конфиг эксперимента как OmegaConf объект"""
+        key = f"experiment{exp_num}"
+        
+        if key not in self.train_config.experiments:
+            raise KeyError(f"Эксперимент {exp_num} не найден в конфиге")
+        
         return self.train_config.experiments[key]
+    
+    def get_dataset_info(self, dataset_name):
+        """Получает информацию о датасете"""
+        if dataset_name not in self.train_config.datasets:
+            raise KeyError(f"Датасет {dataset_name} не найден в конфиге")
+        
+        return OmegaConf.to_container(self.train_config.datasets[dataset_name], resolve=True)
     
     def get_inference_config(self):
         """Получает настройки для инференса"""
         return self.inference_config
+    
+    def get_training_params(self):
+        """Получает общие параметры обучения"""
+        return OmegaConf.to_container(self.train_config.training, resolve=True)
 
 # Создаем глобальный объект
 config = ConfigLoader()
