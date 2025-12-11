@@ -1,3 +1,4 @@
 .env
 план(Н.txt
-/notebooks/models
+/notebooks/models/
+__pycache__
