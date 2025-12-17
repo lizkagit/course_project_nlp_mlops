@@ -1,3 +1,4 @@
+# service/api.py - ИСПРАВЛЕННЫЙ ВАРИАНТ
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
@@ -5,10 +6,23 @@ import uvicorn
 import os
 import sys
 
-# Добавляем путь к конфигам
+# Добавляем путь к текущей директории для импорта локальных модулей
 current_dir = os.path.dirname(os.path.abspath(__file__))
-configs_dir = os.path.join(current_dir, "..", "configs")
-sys.path.insert(0, configs_dir)
+sys.path.insert(0, current_dir)
+
+# Теперь импортируем predictor из той же директории
+try:
+    from predictor import ModelPredictor
+    print("✅ Модуль predictor успешно импортирован")
+except ImportError as e:
+    print(f"❌ Ошибка импорта predictor: {e}")
+    # Пробуем альтернативный путь
+    try:
+        from .predictor import ModelPredictor
+        print("✅ Модуль predictor импортирован через относительный путь")
+    except ImportError as e2:
+        print(f"❌ Ошибка импорта через относительный путь: {e2}")
+        raise
 
 # Пытаемся загрузить конфигурацию
 try:
@@ -17,9 +31,6 @@ try:
 except ImportError:
     HAS_CONFIG = False
     print("⚠️ config_loader не найден, используем значения по умолчанию")
-
-# Инициализируем предиктор
-from predictor import ModelPredictor
 
 # Создаем FastAPI приложение
 app = FastAPI(

@@ -1,217 +1,270 @@
+# service/gradio_ui.py - КОМПАКТНАЯ ВЕРСИЯ
 import gradio as gr
 import requests
 import time
-import json
+from typing import Dict, List
+import plotly.graph_objects as go
+import pandas as pd
+import os
 
-class MLServiceClient:
+class MetroPredictor:
     def __init__(self):
-        self.fastapi_url = "http://localhost:8000"
-        self.bentoml_url = "http://localhost:3000"
-
-    def predict_fastapi_single(self, text):
+        self.api_url = os.getenv("API_URL", "http://localhost:8000")
+        self.history = []
+        print(f"🌐 API: {self.api_url}")
+    
+    def predict_single(self, text: str) -> Dict:
+        """Предсказание для одного текста"""
+        if not text.strip():
+            return {"error": "Введите текст"}
+        
+        start_time = time.perf_counter()
+        
         try:
-            start = time.time()
-            response = requests.post(f"{self.fastapi_url}/predict", json={"text": text}, timeout=5)
-            latency = round((time.time() - start) * 1000, 1)
-            return {**response.json(), "service": "FastAPI", "type": "single", "latency_ms": latency} if response.status_code == 200 else {"error": f"HTTP {response.status_code}", "service": "FastAPI"}
-        except Exception as e:
-            return {"error": str(e), "service": "FastAPI"}
-
-    def predict_bentoml_single(self, text):
-        try:
-            start = time.time()
-            response = requests.post(f"{self.bentoml_url}/predict", data=text, headers={"Content-Type": "text/plain"}, timeout=5)
-            if response.status_code != 200:
-                response = requests.post(f"{self.bentoml_url}/predict", json={"text": text}, timeout=5)
-            latency = round((time.time() - start) * 1000, 1)
-            return {**response.json(), "latency_ms": latency, "service": "BentoML"} if response.status_code == 200 else {"error": f"HTTP {response.status_code}: {response.text[:100]}", "service": "BentoML"}
-        except Exception as e:
-            return {"error": str(e), "service": "BentoML"}
-
-    def predict_fastapi_batch(self, texts):
-        try:
-            start = time.time()
-            response = requests.post(f"{self.fastapi_url}/predict/batch", json={"texts": texts}, timeout=10)
-            latency = round((time.time() - start) * 1000, 1)
-            return {**response.json(), "service": "FastAPI", "type": "batch", "latency_ms": latency, "texts_count": len(texts)} if response.status_code == 200 else {"error": f"HTTP {response.status_code}", "service": "FastAPI"}
-        except Exception as e:
-            return {"error": str(e), "service": "FastAPI"}
-
-    def predict_bentoml_batch(self, texts):
-        try:
-            start = time.time()
-            response = requests.post(f"{self.bentoml_url}/predict_batch", json={"texts": texts}, timeout=10)
-            latency = round((time.time() - start) * 1000, 1)
-            return {**response.json(), "service": "BentoML", "type": "batch", "latency_ms": latency, "texts_count": len(texts)} if response.status_code == 200 else {"error": f"HTTP {response.status_code}", "service": "BentoML"}
-        except Exception as e:
-            return {"error": str(e), "service": "BentoML"}
-
-client = MLServiceClient()
-
-def test_single_prediction(text):
-    if not text.strip():
-        return {}, {}, {}
-
-    fastapi_result = client.predict_fastapi_single(text)
-    bentoml_result = client.predict_bentoml_single(text)
-
-    fast_lat = fastapi_result.get("latency_ms", float('inf'))
-    bento_lat = bentoml_result.get("latency_ms", float('inf'))
-
-    comparison = {
-        "test_type": "single",
-        "fastapi_latency": fast_lat,
-        "bentoml_latency": bento_lat,
-        "faster_service": "FastAPI" if fast_lat < bento_lat else "BentoML",
-        "difference_ms": round(abs(fast_lat - bento_lat), 1)
-    }
-
-    return fastapi_result, bentoml_result, comparison
-
-def test_batch_prediction(texts_input):
-    if not texts_input.strip():
-        return {}, {}, {}
-
-    texts = [t.strip() for t in texts_input.split('\n') if t.strip()]
-    if len(texts) < 2:
-        return {"error": "Нужно минимум 2 текста"}, {"error": "Нужно минимум 2 текста"}, {}
-
-    fastapi_result = client.predict_fastapi_batch(texts)
-    bentoml_result = client.predict_bentoml_batch(texts)
-
-    fast_lat = fastapi_result.get("latency_ms", 0)
-    bento_lat = bentoml_result.get("latency_ms", 0)
-
-    comparison = {
-        "test_type": "batch",
-        "texts_count": len(texts),
-        "fastapi_latency": fast_lat,
-        "bentoml_latency": bento_lat,
-        "avg_time_per_text": {
-            "FastAPI": round(fast_lat / len(texts), 2) if fast_lat > 0 else 0,
-            "BentoML": round(bento_lat / len(texts), 2) if bento_lat > 0 else 0
-        }
-    }
-
-    if fast_lat > 0 and bento_lat > 0:
-        if fast_lat < bento_lat:
-            comparison.update({
-                "faster_service": "FastAPI",
-                "difference_ms": round(bento_lat - fast_lat, 1),
-                "difference_percent": round((bento_lat - fast_lat) / bento_lat * 100, 1)
-            })
-        else:
-            comparison.update({
-                "faster_service": "BentoML",
-                "difference_ms": round(fast_lat - bento_lat, 1),
-                "difference_percent": round((fast_lat - bento_lat) / fast_lat * 100, 1)
-            })
-
-    return fastapi_result, bentoml_result, comparison
-
-batch_examples = """Метро работает отлично!
-Пробки сегодня невыносимые
-Новые станции очень красивые
-В час пик не протолкнуться
-Электрички ходят по расписанию
-Парковка в центре - катастрофа
-Общественный транспорт становится лучше
-Цены на проезд слишком высокие"""
-
-with gr.Blocks(title="ML Services Comparison") as demo:
-    gr.Markdown("# Сравнение FastAPI и BentoML")
-    gr.Markdown("Тестирование single и batch предсказаний")
-
-    with gr.Tabs():
-        with gr.TabItem("Single Prediction"):
-            gr.Markdown("## 📝 Single Prediction (один текст)")
-            single_text = gr.Textbox(label="Введите текст", placeholder="Пример: Метро сегодня работает отлично!", lines=3)
-            single_btn = gr.Button("🚀 Тестировать Single", variant="primary")
-
-            with gr.Row():
-                single_fastapi = gr.JSON(label="FastAPI результат")
-                single_bentoml = gr.JSON(label="BentoML результат")
-
-            single_comparison = gr.JSON(label="⚖️ Сравнение")
-
-            single_btn.click(test_single_prediction, inputs=single_text, outputs=[single_fastapi, single_bentoml, single_comparison])
-
-            gr.Examples(
-                examples=[
-                    ["Метро работает отлично, поезда ходят по расписанию!"],
-                    ["Ужасные пробки на кольцевой линии"],
-                    ["Новые поезда очень комфортные и современные"],
-                    ["В час пик в метро настоящий ад"]
-                ],
-                inputs=single_text
+            response = requests.post(
+                f"{self.api_url}/predict",
+                json={"text": text},
+                timeout=5
             )
+            
+            latency = (time.perf_counter() - start_time) * 1000
+            
+            if response.status_code == 200:
+                result = response.json()
+                
+                # Добавляем в историю
+                self.history.append({
+                    "type": "single",
+                    "text": text[:50],
+                    "latency_ms": round(latency, 2),
+                    "prediction": result.get("prediction", 0)
+                })
+                
+                return {
+                    "status": "success",
+                    "prediction": round(float(result.get("prediction", 0)), 1),
+                    "latency_ms": round(latency, 2)
+                }
+            else:
+                return {
+                    "status": "error",
+                    "error": f"HTTP {response.status_code}"
+                }
+                
+        except Exception as e:
+            return {
+                "status": "error",
+                "error": str(e)
+            }
+    
+    def predict_batch(self, texts: List[str]) -> Dict:
+        """Batch предсказание"""
+        if not texts:
+            return {"error": "Введите тексты"}
+        
+        start_time = time.perf_counter()
+        
+        try:
+            response = requests.post(
+                f"{self.api_url}/predict/batch",
+                json={"texts": texts},
+                timeout=10
+            )
+            
+            total_latency = (time.perf_counter() - start_time) * 1000
+            
+            if response.status_code == 200:
+                result = response.json()
+                
+                # Добавляем КАЖДЫЙ текст из батча в историю
+                predictions = result.get("predictions", [])
+                for i, pred in enumerate(predictions):
+                    if i < len(texts):
+                        self.history.append({
+                            "type": "batch",
+                            "text": texts[i][:50],
+                            "latency_ms": round(total_latency / len(texts), 2),  # Среднее время на текст
+                            "prediction": pred.get("prediction", 0)
+                        })
+                
+                return {
+                    "status": "success",
+                    "total_texts": len(texts),
+                    "total_latency_ms": round(total_latency, 2),
+                    "avg_latency_per_text": round(total_latency / len(texts), 2)
+                }
+            else:
+                return {
+                    "status": "error",
+                    "error": f"HTTP {response.status_code}"
+                }
+                
+        except Exception as e:
+            return {
+                "status": "error",
+                "error": str(e)
+            }
+    
+    def create_latency_chart(self):
+        """Создает график latency (и single и batch)"""
+        if not self.history:
+            fig = go.Figure()
+            fig.update_layout(
+                title="Запустите предсказания",
+                xaxis_title="Номер запроса",
+                yaxis_title="Latency (мс)",
+                template="plotly_white"
+            )
+            return fig
+        
+        indices = list(range(len(self.history)))
+        latencies = [h["latency_ms"] for h in self.history]
+        types = [h["type"] for h in self.history]
+        
+        fig = go.Figure()
+        
+        # Добавляем точки разных цветов для single и batch
+        single_indices = [i for i, t in enumerate(types) if t == "single"]
+        batch_indices = [i for i, t in enumerate(types) if t == "batch"]
+        
+        if single_indices:
+            fig.add_trace(go.Scatter(
+                x=[i for i in single_indices],
+                y=[latencies[i] for i in single_indices],
+                mode='markers',
+                name='Single',
+                marker=dict(color='blue', size=10)
+            ))
+        
+        if batch_indices:
+            fig.add_trace(go.Scatter(
+                x=[i for i in batch_indices],
+                y=[latencies[i] for i in batch_indices],
+                mode='markers',
+                name='Batch',
+                marker=dict(color='red', size=10)
+            ))
+        
+        # Линия тренда
+        if len(latencies) > 1:
+            fig.add_trace(go.Scatter(
+                x=indices,
+                y=pd.Series(latencies).rolling(window=3, min_periods=1).mean(),
+                mode='lines',
+                name='Тренд',
+                line=dict(color='green', width=2, dash='dash')
+            ))
+        
+        fig.update_layout(
+            title=f"Latency запросов (всего: {len(self.history)})",
+            xaxis_title="Номер запроса",
+            yaxis_title="Latency (мс)",
+            showlegend=True,
+            template="plotly_white",
+            height=400
+        )
+        
+        return fig
+    
+    def get_stats(self) -> Dict:
+        """Статистика"""
+        if not self.history:
+            return {"total": 0}
+        
+        latencies = [h["latency_ms"] for h in self.history]
+        single_count = len([h for h in self.history if h["type"] == "single"])
+        batch_count = len([h for h in self.history if h["type"] == "batch"])
+        
+        return {
+            "total_requests": len(self.history),
+            "single_requests": single_count,
+            "batch_requests": batch_count,
+            "avg_latency_ms": round(sum(latencies) / len(latencies), 2),
+            "max_latency_ms": round(max(latencies), 2),
+            "min_latency_ms": round(min(latencies), 2)
+        }
 
-        with gr.TabItem("Batch Prediction"):
-            gr.Markdown("## 📚 Batch Prediction (несколько текстов)")
-            gr.Markdown("Введите тексты, каждый с новой строки")
-            batch_texts = gr.Textbox(label="Тексты (по одному на строку)", placeholder="Введите несколько текстов...", lines=8, value=batch_examples)
-            batch_btn = gr.Button("🚀 Тестировать Batch", variant="primary")
+# Инициализация
+predictor = MetroPredictor()
 
-            with gr.Row():
-                batch_fastapi = gr.JSON(label="FastAPI batch результат")
-                batch_bentoml = gr.JSON(label="BentoML batch результат")
-
-            batch_comparison = gr.JSON(label="⚖️ Сравнение batch")
-
-            batch_btn.click(test_batch_prediction, inputs=batch_texts, outputs=[batch_fastapi, batch_bentoml, batch_comparison])
-
-            gr.Markdown("### 📊 Batch метрики:")
-            gr.Markdown("""
-            - **Total texts**: общее количество текстов
-            - **Latency**: общее время обработки (мс)
-            - **Avg time per text**: среднее время на один текст
-            - **Throughput**: текстов в секунду
-            - **Predictions summary**: статистика предсказаний (min, max, mean, std)
-            """)
-
-        with gr.TabItem("Диагностика"):
-            gr.Markdown("## 🩺 Проверка сервисов")
-
-            def check_services():
-                results = {"FastAPI": {"status": "❌ Недоступен"}, "BentoML": {"status": "🔧 Проверяется при запросах", "urls": {"single_predict": "POST http://localhost:3000/predict", "batch_predict": "POST http://localhost:3000/predict_batch"}}}
-
-                try:
-                    resp = requests.get("http://localhost:8000/health", timeout=3)
-                    results["FastAPI"] = {"status": "✅ Доступен" if resp.status_code == 200 else "❌ Ошибка", "code": resp.status_code, "docs": "http://localhost:8000/docs"}
-                except:
-                    pass
-
-                try:
-                    import socket
-                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    sock.settimeout(2)
-                    result = sock.connect_ex(('localhost', 3000))
-                    sock.close()
-                    results["BentoML"]["port_check"] = "✅ Порт 3000 открыт" if result == 0 else "❌ Порт 3000 закрыт"
-                except:
-                    results["BentoML"]["port_check"] = "⚠️ Не удалось проверить порт"
-
-                return results
-
-            gr.Markdown("### 📋 Примеры batch запросов:")
-            gr.Markdown("""
-            ```bash
-            # FastAPI batch
-            curl -X POST http://localhost:8000/predict/batch \\
-              -H "Content-Type: application/json" \\
-              -d '{"texts": ["Текст 1", "Текст 2", "Текст 3"]}'
-
-            # BentoML batch
-            curl -X POST http://localhost:3000/predict_batch \\
-              -H "Content-Type: application/json" \\
-              -d '{"texts": ["Текст 1", "Текст 2", "Текст 3"]}'
-
-            # BentoML single (text/plain)
-            curl -X POST http://localhost:3000/predict \\
-              -H "Content-Type: text/plain" \\
-              -d "Текст для предсказания"
-            ```
-            """)
+# Создаем интерфейс
+with gr.Blocks(title="Метро Москвы: Предсказание комментариев") as demo:
+    
+    gr.Markdown("# 🚇 Метро Москвы: Предсказание комментариев")
+    
+    with gr.Row():
+        with gr.Column():
+            # Single prediction
+            gr.Markdown("## 📝 Одиночное предсказание")
+            single_text = gr.Textbox(
+                label="Текст поста",
+                placeholder="Введите текст про метро...",
+                lines=3
+            )
+            single_btn = gr.Button("🔮 Предсказать", variant="primary")
+            single_result = gr.JSON(label="Результат")
+            
+            # Batch prediction
+            gr.Markdown("## 📚 Batch предсказание")
+            batch_texts = gr.Textbox(
+                label="Тексты (каждый с новой строки)",
+                placeholder="Текст 1\nТекст 2\nТекст 3",
+                lines=4
+            )
+            batch_btn = gr.Button("📊 Batch анализ", variant="secondary")
+            batch_result = gr.JSON(label="Batch результат")
+        
+        with gr.Column():
+            # Статистика
+            gr.Markdown("## 📊 Статистика")
+            stats_display = gr.JSON(
+                label="Статистика запросов",
+                value=predictor.get_stats()
+            )
+            
+            # График
+            gr.Markdown("## 📈 График latency")
+            latency_chart = gr.Plot(label="Время ответа")
+    
+    # Примеры
+    gr.Markdown("## 🎯 Примеры")
+    examples = gr.Examples(
+        examples=[
+            ["Новая станция метро открылась сегодня!"],
+            ["Ужасные пробки на кольцевой линии"],
+            ["Бесплатный Wi-Fi в метро работает отлично"]
+        ],
+        inputs=single_text
+    )
+    
+    # Обработчики
+    def handle_single(text):
+        result = predictor.predict_single(text)
+        return result, predictor.create_latency_chart(), predictor.get_stats()
+    
+    def handle_batch(texts):
+        text_list = [t.strip() for t in texts.split('\n') if t.strip()]
+        result = predictor.predict_batch(text_list)
+        return result, predictor.create_latency_chart(), predictor.get_stats()
+    
+    single_btn.click(
+        fn=handle_single,
+        inputs=[single_text],
+        outputs=[single_result, latency_chart, stats_display]
+    )
+    
+    batch_btn.click(
+        fn=handle_batch,
+        inputs=[batch_texts],
+        outputs=[batch_result, latency_chart, stats_display]
+    )
+    
+    # Автозагрузка графика
+    demo.load(
+        fn=lambda: predictor.create_latency_chart(),
+        inputs=[],
+        outputs=[latency_chart]
+    )
 
 if __name__ == "__main__":
-    demo.launch(server_name="0.0.0.0", server_port=7860, share=False)
+    demo.launch(server_name="0.0.0.0", server_port=7860)

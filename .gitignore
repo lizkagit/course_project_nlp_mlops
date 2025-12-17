@@ -1,4 +1,4 @@
 .env
 план(Н.txt
-/notebooks/models/
+/service/bentoml_service.py
 __pycache__
