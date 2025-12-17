@@ -11,7 +11,7 @@ class MetroPredictor:
     def __init__(self):
         self.api_url = os.getenv("API_URL", "http://localhost:8000")
         self.history = []
-        print(f"🌐 API: {self.api_url}")
+        print(f" API: {self.api_url}")
     
     def predict_single(self, text: str) -> Dict:
         """Предсказание для одного текста"""
@@ -195,39 +195,39 @@ with gr.Blocks(title="Метро Москвы: Предсказание комм
     with gr.Row():
         with gr.Column():
             # Single prediction
-            gr.Markdown("## 📝 Одиночное предсказание")
+            gr.Markdown("## Одиночное предсказание")
             single_text = gr.Textbox(
                 label="Текст поста",
                 placeholder="Введите текст про метро...",
                 lines=3
             )
-            single_btn = gr.Button("🔮 Предсказать", variant="primary")
+            single_btn = gr.Button("Предсказать", variant="primary")
             single_result = gr.JSON(label="Результат")
             
             # Batch prediction
-            gr.Markdown("## 📚 Batch предсказание")
+            gr.Markdown("## Batch предсказание")
             batch_texts = gr.Textbox(
                 label="Тексты (каждый с новой строки)",
                 placeholder="Текст 1\nТекст 2\nТекст 3",
                 lines=4
             )
-            batch_btn = gr.Button("📊 Batch анализ", variant="secondary")
+            batch_btn = gr.Button("Batch анализ", variant="secondary")
             batch_result = gr.JSON(label="Batch результат")
         
         with gr.Column():
             # Статистика
-            gr.Markdown("## 📊 Статистика")
+            gr.Markdown("## Статистика")
             stats_display = gr.JSON(
                 label="Статистика запросов",
                 value=predictor.get_stats()
             )
             
             # График
-            gr.Markdown("## 📈 График latency")
+            gr.Markdown("## График latency")
             latency_chart = gr.Plot(label="Время ответа")
     
     # Примеры
-    gr.Markdown("## 🎯 Примеры")
+    gr.Markdown("## Примеры")
     examples = gr.Examples(
         examples=[
             ["Новая станция метро открылась сегодня!"],
